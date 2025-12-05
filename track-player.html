@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Track Player</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .player-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .track-info {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .track-number {
+            color: #667eea;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .track-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+
+        .track-time {
+            color: #718096;
+            font-size: 14px;
+        }
+
+        .progress-container {
+            margin-bottom: 30px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 3px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+        }
+
+        button {
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+            font-size: 20px;
+        }
+
+        button:hover {
+            background: #667eea;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        #playPauseBtn {
+            width: 80px;
+            height: 80px;
+            font-size: 28px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+        }
+
+        #playPauseBtn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        button:disabled:hover {
+            transform: none;
+            background: white;
+            color: inherit;
+        }
+    </style>
+</head>
+<body>
+    <div class="player-container">
+        <div class="track-info">
+            <div class="track-number" id="trackNumber">Track 1 of 60</div>
+            <div class="track-title" id="trackTitle">大宮駅停車中</div>
+            <div class="track-time" id="trackTime">0:00 / 0:14</div>
+        </div>
+
+        <div class="progress-container">
+            <div class="progress-bar" id="progressBar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="prevBtn" title="Previous">⏮</button>
+            <button id="playPauseBtn" title="Play">▶</button>
+            <button id="nextBtn" title="Next">⏭</button>
+        </div>
+    </div>
+
+    <audio id="audio" preload="auto"></audio>
+
+    <script>
+        // ===== CONFIGURATION =====
+        // Replace 'audio.mp3' with your actual audio file name
+        const AUDIO_FILE = 'audio.mp3';
+
+        // Parse your timestamp format into tracks
+        const TIMESTAMP_DATA = `0:00 大宮駅停車中
+0:14 大宮駅発車次はさいたま新都心駅
+1:03 次は与野駅
+1:37 次は北浦和駅
+1:55 次は浦和駅
+2:22 次は南浦和駅
+2:47 次は蕨駅
+3:41 まもなく蕨駅
+3:59 次は西川口駅
+4:10 まもなく西川口駅
+4:29 次は川口駅
+5:00 まもなく川口駅
+5:18 次は赤羽駅
+5:29 まもなく赤羽駅
+6:02 次は東十条駅
+6:46 次は王子駅
+7:41 次は上中里駅
+8:00 次は田端駅
+8:37 次は上野駅
+9:00 まもなく上野駅
+9:50 次は秋葉原駅
+10:34 次は神田駅
+11:00 次は東京駅
+11:50 次は浜松町駅
+12:18 まもなく浜松町駅
+13:00 次は田町駅
+13:28 次は高輪ゲートウェイ駅
+13:47 次は品川駅
+14:18 次は大井町駅
+14:59 まもなく大井町駅
+15:30 次は大森駅
+15:41 まもなく大森駅
+15:58 次は蒲田駅
+16:29 まもなく蒲田駅
+16:58 次は川崎駅
+17:10 まもなく川崎駅
+17:37 次は鶴見駅
+18:16 まもなく鶴見駅
+18:40 次は新子安駅
+18:51 まもなく新子安駅
+19:09 次は東神奈川駅
+19:21 まもなく東神奈川駅
+19:46 次は横浜駅
+20:39 次は桜木町駅
+21:27 次は関内駅
+21:52 次は石川町駅
+22:10 次は山手駅
+22:27 次は根岸駅
+22:59 まもなく根岸駅
+23:15 次は磯子駅
+23:25 まもなく磯子駅
+23:42 次は新杉田駅
+24:32 次は洋光台駅
+24:43 まもなく洋光台駅
+25:00 次は港南台駅
+25:11 まもなく港南台駅
+25:29 次は本郷台駅
+25:40 まもなく本郷台駅
+25:57 次は終点大船駅
+26:10 まもなく終点大船駅＆動画終了`;
+
+        // ===== PARSE TIMESTAMPS =====
+        function parseTimestamp(timeStr) {
+            const parts = timeStr.split(':');
+            return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+        }
+
+        function parseTracksFromData(data) {
+            const lines = data.trim().split('\n');
+            const tracks = [];
+            
+            for (let i = 0; i < lines.length; i++) {
+                const match = lines[i].match(/^(\d+:\d+)\s+(.+)$/);
+                if (match) {
+                    const startTime = parseTimestamp(match[1]);
+                    const title = match[2];
+                    const nextStartTime = i < lines.length - 1 
+                        ? parseTimestamp(lines[i + 1].match(/^(\d+:\d+)/)[1])
+                        : null;
+                    
+                    tracks.push({
+                        title: title,
+                        start: startTime,
+                        end: nextStartTime,
+                        duration: nextStartTime ? nextStartTime - startTime : null
+                    });
+                }
+            }
+            
+            return tracks;
+        }
+
+        const tracks = parseTracksFromData(TIMESTAMP_DATA);
+
+        // ===== PLAYER STATE =====
+        let currentTrackIndex = 0;
+        let isPlaying = false;
+
+        // ===== DOM ELEMENTS =====
+        const audio = document.getElementById('audio');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const trackNumber = document.getElementById('trackNumber');
+        const trackTitle = document.getElementById('trackTitle');
+        const trackTime = document.getElementById('trackTime');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+
+        // ===== INITIALIZE =====
+        audio.src = AUDIO_FILE;
+        
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function updateUI() {
+            const track = tracks[currentTrackIndex];
+            trackNumber.textContent = `Track ${currentTrackIndex + 1} of ${tracks.length}`;
+            trackTitle.textContent = track.title;
+            
+            prevBtn.disabled = currentTrackIndex === 0;
+            nextBtn.disabled = currentTrackIndex === tracks.length - 1;
+        }
+
+        function loadTrack(index, autoplay = false) {
+            currentTrackIndex = index;
+            const track = tracks[currentTrackIndex];
+            
+            audio.currentTime = track.start;
+            updateUI();
+            
+            if (autoplay) {
+                audio.play();
+                isPlaying = true;
+                playPauseBtn.textContent = '⏸';
+            } else {
+                isPlaying = false;
+                playPauseBtn.textContent = '▶';
+            }
+        }
+
+        // ===== EVENT LISTENERS =====
+        playPauseBtn.addEventListener('click', () => {
+            if (isPlaying) {
+                audio.pause();
+                isPlaying = false;
+                playPauseBtn.textContent = '▶';
+            } else {
+                audio.play();
+                isPlaying = true;
+                playPauseBtn.textContent = '⏸';
+            }
+        });
+
+        prevBtn.addEventListener('click', () => {
+            if (currentTrackIndex > 0) {
+                loadTrack(currentTrackIndex - 1, true);
+            }
+        });
+
+        nextBtn.addEventListener('click', () => {
+            if (currentTrackIndex < tracks.length - 1) {
+                loadTrack(currentTrackIndex + 1, true);
+            }
+        });
+
+        audio.addEventListener('timeupdate', () => {
+            const track = tracks[currentTrackIndex];
+            const currentTime = audio.currentTime;
+            
+            // Check if we've reached the end of the current track
+            if (track.end && currentTime >= track.end) {
+                audio.pause();
+                audio.currentTime = track.start;
+                isPlaying = false;
+                playPauseBtn.textContent = '▶';
+                progressFill.style.width = '0%';
+                return;
+            }
+            
+            // Update progress bar
+            if (track.duration) {
+                const progress = ((currentTime - track.start) / track.duration) * 100;
+                progressFill.style.width = `${Math.min(progress, 100)}%`;
+            }
+            
+            // Update time display
+            const elapsed = currentTime - track.start;
+            const total = track.duration || 0;
+            trackTime.textContent = `${formatTime(elapsed)} / ${formatTime(total)}`;
+        });
+
+        // Click on progress bar to seek
+        progressBar.addEventListener('click', (e) => {
+            const track = tracks[currentTrackIndex];
+            if (!track.duration) return;
+            
+            const rect = progressBar.getBoundingClientRect();
+            const percent = (e.clientX - rect.left) / rect.width;
+            const newTime = track.start + (track.duration * percent);
+            audio.currentTime = newTime;
+        });
+
+        // Handle audio loading
+        audio.addEventListener('loadedmetadata', () => {
+            // Set the last track's end time to audio duration if not set
+            if (tracks[tracks.length - 1].end === null) {
+                tracks[tracks.length - 1].end = audio.duration;
+                tracks[tracks.length - 1].duration = audio.duration - tracks[tracks.length - 1].start;
+            }
+            updateUI();
+        });
+
+        // Initialize
+        loadTrack(0, false);
+    </script>
+</body>
+</html>
